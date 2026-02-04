@@ -21,10 +21,12 @@ export default async function DashboardLayout({
     .single()
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-[rgb(var(--background))]">
       <Sidebar user={profile} />
-      <main className="flex-1 overflow-y-auto p-8">
-        {children}
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-8 lg:p-10">
+          {children}
+        </div>
       </main>
     </div>
   )
