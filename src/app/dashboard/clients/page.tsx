@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Plus, Copy, ExternalLink } from 'lucide-react'
+import { Plus, Users, ExternalLink, Building2, Mail, Search, Filter } from 'lucide-react'
 import CopyButton from '@/components/copy-button'
 
 export default async function ClientsPage() {
@@ -22,78 +22,139 @@ export default async function ClientsPage() {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">Clients</h1>
+    <div className="min-h-screen bg-[rgb(var(--background))]">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-[rgb(var(--foreground))] tracking-tight">
+            Clients
+          </h1>
+          <p className="text-[rgb(var(--foreground-secondary))] mt-1">
+            Manage your client relationships and portal access
+          </p>
+        </div>
         <Link
           href="/dashboard/clients/new"
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="btn btn-primary self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           Add Client
         </Link>
       </div>
 
+      {/* Search & Filter Bar */}
+      <div className="card p-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[rgb(var(--foreground-muted))]" />
+            <input
+              type="text"
+              placeholder="Search clients..."
+              className="input pl-10"
+            />
+          </div>
+          <button className="btn btn-secondary">
+            <Filter className="w-4 h-4" />
+            Filter
+          </button>
+        </div>
+      </div>
+
       {clients && clients.length > 0 ? (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Client</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Company</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Projects</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Portal Link</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {clients.map((client) => {
-                const portalUrl = `${baseUrl}/client/${client.portal_token}`
-                return (
-                  <tr key={client.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div>
-                        <p className="font-medium">{client.name}</p>
-                        <p className="text-sm text-gray-500">{client.email}</p>
+        <div className="space-y-4">
+          {clients.map((client) => {
+            const portalUrl = `${baseUrl}/client/${client.portal_token}`
+            const projectCount = (client.projects as { count: number }[])?.[0]?.count || 0
+            
+            return (
+              <div
+                key={client.id}
+                className="card p-6 hover:shadow-md transition-all group"
+              >
+                <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                  {/* Client info */}
+                  <div className="flex items-start gap-4 flex-1 min-w-0">
+                    {/* Avatar */}
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[rgb(var(--primary-400))] to-[rgb(var(--primary-600))] flex items-center justify-center shadow-sm shrink-0">
+                      <span className="text-white font-semibold text-lg">
+                        {client.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    
+                    {/* Details */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-semibold text-[rgb(var(--foreground))] group-hover:text-[rgb(var(--primary-600))] transition-colors">
+                        {client.name}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-4 mt-1 text-sm text-[rgb(var(--foreground-muted))]">
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="w-3.5 h-3.5" />
+                          <span className="truncate max-w-[200px]">{client.email}</span>
+                        </div>
+                        {client.company && (
+                          <div className="flex items-center gap-1.5">
+                            <Building2 className="w-3.5 h-3.5" />
+                            <span>{client.company}</span>
+                          </div>
+                        )}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {client.company || '-'}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {(client.projects as { count: number }[])?.[0]?.count || 0}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <code className="text-xs bg-gray-100 px-2 py-1 rounded max-w-[200px] truncate">
-                          {portalUrl}
-                        </code>
+                    </div>
+                  </div>
+
+                  {/* Stats & Actions */}
+                  <div className="flex items-center gap-6">
+                    {/* Project count */}
+                    <div className="text-center px-4">
+                      <p className="text-2xl font-bold text-[rgb(var(--foreground))] tabular-nums">
+                        {projectCount}
+                      </p>
+                      <p className="text-xs text-[rgb(var(--foreground-muted))]">
+                        {projectCount === 1 ? 'Project' : 'Projects'}
+                      </p>
+                    </div>
+
+                    {/* Portal link */}
+                    <div className="flex items-center gap-2 p-3 rounded-xl bg-[rgb(var(--neutral-50))] border border-[rgb(var(--border-light))]">
+                      <code className="text-xs text-[rgb(var(--foreground-secondary))] max-w-[150px] truncate font-mono">
+                        {portalUrl}
+                      </code>
+                      <div className="flex items-center gap-1">
                         <CopyButton text={portalUrl} />
                         <a
                           href={portalUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="p-1 text-gray-400 hover:text-gray-600"
+                          className="p-1.5 rounded-lg text-[rgb(var(--foreground-muted))] hover:text-[rgb(var(--primary-600))] hover:bg-[rgb(var(--primary-50))] transition-colors"
+                          title="Open portal"
                         >
                           <ExternalLink className="w-4 h-4" />
                         </a>
                       </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-          <p className="text-gray-500 mb-4">No clients yet</p>
-          <Link
-            href="/dashboard/clients/new"
-            className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" />
-            Add your first client
-          </Link>
+        <div className="card">
+          <div className="empty-state py-16">
+            <div className="w-20 h-20 rounded-2xl bg-[rgb(var(--neutral-100))] flex items-center justify-center mb-6">
+              <Users className="w-10 h-10 text-[rgb(var(--foreground-muted))]" />
+            </div>
+            <p className="empty-state-title text-xl">No clients yet</p>
+            <p className="empty-state-description">
+              Add your first client to start managing projects and communication
+            </p>
+            <Link
+              href="/dashboard/clients/new"
+              className="btn btn-primary mt-6"
+            >
+              <Plus className="w-4 h-4" />
+              Add your first client
+            </Link>
+          </div>
         </div>
       )}
     </div>

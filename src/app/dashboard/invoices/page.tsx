@@ -1,7 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
-import { formatDate, formatCurrency, getStatusColor } from '@/lib/utils'
+import { formatDate, formatCurrency } from '@/lib/utils'
 import Link from 'next/link'
-import { Plus, FileText, Send, CheckCircle, AlertCircle } from 'lucide-react'
+import { 
+  Plus, 
+  FileText, 
+  Send, 
+  CheckCircle, 
+  AlertCircle, 
+  DollarSign,
+  TrendingUp,
+  Clock,
+  Search,
+  Filter
+} from 'lucide-react'
 import InvoiceActions from '@/components/dashboard/invoice-actions'
 
 export default async function InvoicesPage() {
@@ -44,100 +55,212 @@ export default async function InvoicesPage() {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">Invoices</h1>
+    <div className="min-h-screen bg-[rgb(var(--background))]">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-[rgb(var(--foreground))] tracking-tight">
+            Invoices
+          </h1>
+          <p className="text-[rgb(var(--foreground-secondary))] mt-1">
+            Track and manage client invoices and payments
+          </p>
+        </div>
         <Link
           href="/dashboard/invoices/new"
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="btn btn-primary self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           New Invoice
         </Link>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        <div className="bg-white p-4 rounded-xl shadow-sm">
-          <p className="text-sm text-gray-500">Total Revenue</p>
-          <p className="text-2xl font-bold">{formatCurrency(stats.total)}</p>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Total Revenue */}
+        <div className="card p-6 hover-lift">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[rgb(var(--neutral-200))] to-[rgb(var(--neutral-100))] flex items-center justify-center">
+              <DollarSign className="w-6 h-6 text-[rgb(var(--foreground-secondary))]" />
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-[rgb(var(--foreground))] tracking-tight tabular-nums">
+            {formatCurrency(stats.total)}
+          </p>
+          <p className="text-sm text-[rgb(var(--foreground-secondary))] mt-1">
+            Total Revenue
+          </p>
         </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm">
-          <p className="text-sm text-gray-500">Paid</p>
-          <p className="text-2xl font-bold text-green-600">{formatCurrency(stats.paid)}</p>
+
+        {/* Paid */}
+        <div className="card p-6 hover-lift">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[rgb(var(--success-100))] to-[rgb(var(--success-50))] flex items-center justify-center">
+              <CheckCircle className="w-6 h-6 text-[rgb(var(--success-600))]" />
+            </div>
+            <span className="flex items-center gap-1 text-xs font-medium text-[rgb(var(--success-700))] bg-[rgb(var(--success-50))] px-2 py-1 rounded-full">
+              <TrendingUp className="w-3 h-3" />
+              Collected
+            </span>
+          </div>
+          <p className="text-3xl font-bold text-[rgb(var(--success-600))] tracking-tight tabular-nums">
+            {formatCurrency(stats.paid)}
+          </p>
+          <p className="text-sm text-[rgb(var(--foreground-secondary))] mt-1">
+            Paid
+          </p>
         </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm">
-          <p className="text-sm text-gray-500">Pending</p>
-          <p className="text-2xl font-bold text-blue-600">{formatCurrency(stats.pending)}</p>
+
+        {/* Pending */}
+        <div className="card p-6 hover-lift">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[rgb(var(--primary-100))] to-[rgb(var(--primary-50))] flex items-center justify-center">
+              <Clock className="w-6 h-6 text-[rgb(var(--primary-600))]" />
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-[rgb(var(--primary-600))] tracking-tight tabular-nums">
+            {formatCurrency(stats.pending)}
+          </p>
+          <p className="text-sm text-[rgb(var(--foreground-secondary))] mt-1">
+            Pending
+          </p>
         </div>
-        <div className="bg-white p-4 rounded-xl shadow-sm">
-          <p className="text-sm text-gray-500">Overdue</p>
-          <p className="text-2xl font-bold text-red-600">{formatCurrency(stats.overdue)}</p>
+
+        {/* Overdue */}
+        <div className="card p-6 hover-lift">
+          <div className="flex items-start justify-between mb-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[rgb(var(--error-100))] to-[rgb(var(--error-50))] flex items-center justify-center">
+              <AlertCircle className="w-6 h-6 text-[rgb(var(--error-600))]" />
+            </div>
+            {stats.overdue > 0 && (
+              <span className="flex items-center gap-1 text-xs font-medium text-[rgb(var(--error-700))] bg-[rgb(var(--error-50))] px-2 py-1 rounded-full">
+                <AlertCircle className="w-3 h-3" />
+                Action needed
+              </span>
+            )}
+          </div>
+          <p className="text-3xl font-bold text-[rgb(var(--error-600))] tracking-tight tabular-nums">
+            {formatCurrency(stats.overdue)}
+          </p>
+          <p className="text-sm text-[rgb(var(--foreground-secondary))] mt-1">
+            Overdue
+          </p>
+        </div>
+      </div>
+
+      {/* Search & Filter Bar */}
+      <div className="card p-4 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[rgb(var(--foreground-muted))]" />
+            <input
+              type="text"
+              placeholder="Search invoices..."
+              className="input pl-10"
+            />
+          </div>
+          <button className="btn btn-secondary">
+            <Filter className="w-4 h-4" />
+            Filter
+          </button>
         </div>
       </div>
 
       {invoices && invoices.length > 0 ? (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Invoice #</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Client</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Project</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Amount</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Status</th>
-                <th className="text-left px-6 py-3 text-sm font-medium text-gray-500">Due Date</th>
-                <th className="text-right px-6 py-3 text-sm font-medium text-gray-500">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {invoices.map((invoice) => (
-                <tr key={invoice.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <span className="font-mono text-sm">{invoice.number}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="font-medium">{invoice.clients?.name}</p>
-                      {invoice.clients?.company && (
-                        <p className="text-sm text-gray-500">{invoice.clients.company}</p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {invoice.projects?.name || '-'}
-                  </td>
-                  <td className="px-6 py-4 font-medium">
-                    {formatCurrency(invoice.amount)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs ${getStatusColor(invoice.status)}`}>
-                      {getStatusIcon(invoice.status)}
-                      {invoice.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {formatDate(invoice.due_date)}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <InvoiceActions invoice={invoice} />
-                  </td>
+        <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-[rgb(var(--neutral-50))] border-b border-[rgb(var(--border-light))]">
+                <tr>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-[rgb(var(--foreground-secondary))] uppercase tracking-wider">
+                    Invoice #
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-[rgb(var(--foreground-secondary))] uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-[rgb(var(--foreground-secondary))] uppercase tracking-wider">
+                    Project
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-[rgb(var(--foreground-secondary))] uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-[rgb(var(--foreground-secondary))] uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-[rgb(var(--foreground-secondary))] uppercase tracking-wider">
+                    Due Date
+                  </th>
+                  <th className="text-right px-6 py-4 text-xs font-semibold text-[rgb(var(--foreground-secondary))] uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-[rgb(var(--border-light))]">
+                {invoices.map((invoice) => (
+                  <tr key={invoice.id} className="hover:bg-[rgb(var(--neutral-50))] transition-colors">
+                    <td className="px-6 py-4">
+                      <span className="font-mono text-sm font-medium text-[rgb(var(--foreground))]">
+                        {invoice.number}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div>
+                        <p className="font-medium text-[rgb(var(--foreground))]">
+                          {invoice.clients?.name}
+                        </p>
+                        {invoice.clients?.company && (
+                          <p className="text-sm text-[rgb(var(--foreground-muted))]">
+                            {invoice.clients.company}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-[rgb(var(--foreground-secondary))]">
+                      {invoice.projects?.name || '—'}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="font-semibold text-[rgb(var(--foreground))] tabular-nums">
+                        {formatCurrency(invoice.amount)}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`badge badge-${invoice.status}`}>
+                        <span className="flex items-center gap-1.5">
+                          {getStatusIcon(invoice.status)}
+                          {invoice.status}
+                        </span>
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-[rgb(var(--foreground-secondary))]">
+                      {formatDate(invoice.due_date)}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <InvoiceActions invoice={invoice} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-          <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500 mb-4">No invoices yet</p>
-          <Link
-            href="/dashboard/invoices/new"
-            className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" />
-            Create your first invoice
-          </Link>
+        <div className="card">
+          <div className="empty-state py-16">
+            <div className="w-20 h-20 rounded-2xl bg-[rgb(var(--neutral-100))] flex items-center justify-center mb-6">
+              <FileText className="w-10 h-10 text-[rgb(var(--foreground-muted))]" />
+            </div>
+            <p className="empty-state-title text-xl">No invoices yet</p>
+            <p className="empty-state-description">
+              Create invoices to track payments and get paid faster
+            </p>
+            <Link
+              href="/dashboard/invoices/new"
+              className="btn btn-primary mt-6"
+            >
+              <Plus className="w-4 h-4" />
+              Create your first invoice
+            </Link>
+          </div>
         </div>
       )}
     </div>

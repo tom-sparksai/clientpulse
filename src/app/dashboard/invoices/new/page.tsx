@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, FileText, Info, DollarSign, Calendar, Loader2 } from 'lucide-react'
+import { Button, Input, Select, Card, CardContent } from '@/components/ui'
+import { useToast } from '@/components/ui/toast'
 
 interface Client {
   id: string
@@ -26,38 +28,45 @@ export default function NewInvoicePage() {
   const [clients, setClients] = useState<Client[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([])
-  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingData, setLoadingData] = useState(true)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+  
   const router = useRouter()
   const supabase = createClient()
+  const { success, error: showError } = useToast()
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
 
-      const { data: profile } = await supabase
-        .from('users')
-        .select('agency_id')
-        .eq('id', user.id)
-        .single()
+        const { data: profile } = await supabase
+          .from('users')
+          .select('agency_id')
+          .eq('id', user.id)
+          .single()
 
-      if (profile?.agency_id) {
-        const [clientsRes, projectsRes] = await Promise.all([
-          supabase
-            .from('clients')
-            .select('id, name, company')
-            .eq('agency_id', profile.agency_id)
-            .order('name'),
-          supabase
-            .from('projects')
-            .select('id, name, client_id')
-            .eq('agency_id', profile.agency_id)
-            .order('name'),
-        ])
+        if (profile?.agency_id) {
+          const [clientsRes, projectsRes] = await Promise.all([
+            supabase
+              .from('clients')
+              .select('id, name, company')
+              .eq('agency_id', profile.agency_id)
+              .order('name'),
+            supabase
+              .from('projects')
+              .select('id, name, client_id')
+              .eq('agency_id', profile.agency_id)
+              .order('name'),
+          ])
 
-        if (clientsRes.data) setClients(clientsRes.data)
-        if (projectsRes.data) setProjects(projectsRes.data)
+          if (clientsRes.data) setClients(clientsRes.data)
+          if (projectsRes.data) setProjects(projectsRes.data)
+        }
+      } finally {
+        setLoadingData(false)
       }
     }
 
@@ -74,15 +83,45 @@ export default function NewInvoicePage() {
     }
   }, [clientId, projects])
 
+  // Set default due date to 30 days from now
+  useEffect(() => {
+    const defaultDue = new Date()
+    defaultDue.setDate(defaultDue.getDate() + 30)
+    setDueDate(defaultDue.toISOString().split('T')[0])
+  }, [])
+
   const generateInvoiceNumber = () => {
     const year = new Date().getFullYear()
     const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0')
     return `INV-${year}-${random}`
   }
 
+  const validate = () => {
+    const newErrors: Record<string, string> = {}
+    
+    if (!clientId) {
+      newErrors.clientId = 'Please select a client'
+    }
+    
+    if (!amount || parseFloat(amount) <= 0) {
+      newErrors.amount = 'Please enter a valid amount'
+    }
+    
+    if (!dueDate) {
+      newErrors.dueDate = 'Please select a due date'
+    } else if (new Date(dueDate) < new Date(new Date().toDateString())) {
+      newErrors.dueDate = 'Due date cannot be in the past'
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError('')
+    
+    if (!validate()) return
+    
     setLoading(true)
 
     try {
@@ -97,13 +136,15 @@ export default function NewInvoicePage() {
 
       if (!profile?.agency_id) throw new Error('No agency found')
 
+      const invoiceNumber = generateInvoiceNumber()
+      
       const { error: insertError } = await supabase
         .from('invoices')
         .insert({
           agency_id: profile.agency_id,
           client_id: clientId,
           project_id: projectId || null,
-          number: generateInvoiceNumber(),
+          number: invoiceNumber,
           amount: parseFloat(amount),
           due_date: dueDate,
           status: 'draft',
@@ -111,138 +152,163 @@ export default function NewInvoicePage() {
 
       if (insertError) throw insertError
 
+      success('Invoice created', `Invoice ${invoiceNumber} has been created as a draft`)
       router.push('/dashboard/invoices')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create invoice')
+      showError('Failed to create invoice', err instanceof Error ? err.message : 'An error occurred')
     } finally {
       setLoading(false)
     }
   }
 
-  // Set default due date to 30 days from now
-  useEffect(() => {
-    const defaultDue = new Date()
-    defaultDue.setDate(defaultDue.getDate() + 30)
-    setDueDate(defaultDue.toISOString().split('T')[0])
-  }, [])
-
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl mx-auto">
+      {/* Header */}
       <div className="mb-8">
         <Link
           href="/dashboard/invoices"
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+          className="inline-flex items-center gap-2 text-[rgb(var(--foreground-secondary))] hover:text-[rgb(var(--foreground))] transition-colors mb-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--ring))] rounded-lg px-1 py-0.5"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" />
           Back to Invoices
         </Link>
-        <h1 className="text-2xl font-bold">Create New Invoice</h1>
-        <p className="text-gray-600 mt-1">Generate an invoice for a client</p>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[rgb(var(--warning-100))] to-[rgb(var(--warning-50))] flex items-center justify-center">
+            <FileText className="w-6 h-6 text-[rgb(var(--warning-600))]" aria-hidden="true" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-[rgb(var(--foreground))] tracking-tight">
+              Create New Invoice
+            </h1>
+            <p className="text-[rgb(var(--foreground-secondary))] mt-0.5">
+              Generate an invoice for a client
+            </p>
+          </div>
+        </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm p-6 space-y-6">
-        {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm">
-            {error}
-          </div>
-        )}
+      {/* Form */}
+      <Card>
+        <CardContent className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+            {/* Client Selection */}
+            <div>
+              <label htmlFor="client" className="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5">
+                Client <span className="text-[rgb(var(--error-500))]">*</span>
+              </label>
+              {loadingData ? (
+                <div className="flex items-center gap-2 h-10 text-[rgb(var(--foreground-muted))]">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">Loading clients...</span>
+                </div>
+              ) : (
+                <Select
+                  id="client"
+                  value={clientId}
+                  onChange={(e) => {
+                    setClientId(e.target.value)
+                    if (errors.clientId) setErrors(prev => ({ ...prev, clientId: '' }))
+                  }}
+                  options={clients.map(client => ({
+                    value: client.id,
+                    label: client.company ? `${client.name} (${client.company})` : client.name
+                  }))}
+                  placeholder="Select a client"
+                  error={errors.clientId}
+                  aria-required="true"
+                />
+              )}
+            </div>
 
-        <div>
-          <label htmlFor="client" className="block text-sm font-medium text-gray-700 mb-1">
-            Client <span className="text-red-500">*</span>
-          </label>
-          <select
-            id="client"
-            required
-            value={clientId}
-            onChange={(e) => setClientId(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">Select a client</option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.name} {client.company && `(${client.company})`}
-              </option>
-            ))}
-          </select>
-        </div>
+            {/* Project Selection (Optional) */}
+            <div>
+              <label htmlFor="project" className="block text-sm font-medium text-[rgb(var(--foreground))] mb-1.5">
+                Project <span className="text-[rgb(var(--foreground-muted))]">(optional)</span>
+              </label>
+              <Select
+                id="project"
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                options={filteredProjects.map(project => ({
+                  value: project.id,
+                  label: project.name
+                }))}
+                placeholder="No specific project"
+                disabled={!clientId}
+                helperText={
+                  clientId && filteredProjects.length === 0 
+                    ? 'No projects for this client' 
+                    : 'Link this invoice to a specific project'
+                }
+              />
+            </div>
 
-        <div>
-          <label htmlFor="project" className="block text-sm font-medium text-gray-700 mb-1">
-            Project (optional)
-          </label>
-          <select
-            id="project"
-            value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
-            disabled={!clientId}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-          >
-            <option value="">No specific project</option>
-            {filteredProjects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-          {clientId && filteredProjects.length === 0 && (
-            <p className="text-sm text-gray-500 mt-1">No projects for this client</p>
-          )}
-        </div>
+            {/* Amount */}
+            <Input
+              id="amount"
+              label="Amount (USD)"
+              type="number"
+              min="0"
+              step="0.01"
+              required
+              value={amount}
+              onChange={(e) => {
+                setAmount(e.target.value)
+                if (errors.amount) setErrors(prev => ({ ...prev, amount: '' }))
+              }}
+              placeholder="0.00"
+              error={errors.amount}
+              leftIcon={<DollarSign className="w-4 h-4" />}
+              aria-required="true"
+            />
 
-        <div>
-          <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
-            Amount (USD) <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="amount"
-            type="number"
-            min="0"
-            step="0.01"
-            required
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder="0.00"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+            {/* Due Date */}
+            <Input
+              id="dueDate"
+              label="Due Date"
+              type="date"
+              required
+              value={dueDate}
+              onChange={(e) => {
+                setDueDate(e.target.value)
+                if (errors.dueDate) setErrors(prev => ({ ...prev, dueDate: '' }))
+              }}
+              error={errors.dueDate}
+              leftIcon={<Calendar className="w-4 h-4" />}
+              aria-required="true"
+            />
 
-        <div>
-          <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 mb-1">
-            Due Date <span className="text-red-500">*</span>
-          </label>
-          <input
-            id="dueDate"
-            type="date"
-            required
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+            {/* Info Box */}
+            <div className="bg-[rgb(var(--neutral-100))] border border-[rgb(var(--border))] p-4 rounded-xl">
+              <div className="flex gap-3">
+                <Info className="w-5 h-5 text-[rgb(var(--foreground-secondary))] shrink-0 mt-0.5" aria-hidden="true" />
+                <p className="text-sm text-[rgb(var(--foreground-secondary))]">
+                  <strong>Draft Invoice:</strong> This invoice will be created as a draft. 
+                  You can mark it as sent once you've delivered it to the client.
+                </p>
+              </div>
+            </div>
 
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <p className="text-sm text-gray-600">
-            The invoice will be created as a <strong>draft</strong>. You can mark it as sent once you&apos;ve delivered it to the client.
-          </p>
-        </div>
-
-        <div className="flex gap-3 pt-4">
-          <button
-            type="submit"
-            disabled={loading || !clientId || !amount}
-            className="flex-1 py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            {loading ? 'Creating...' : 'Create Invoice'}
-          </button>
-          <Link
-            href="/dashboard/invoices"
-            className="py-2 px-4 border border-gray-300 rounded-lg hover:bg-gray-50 text-center"
-          >
-            Cancel
-          </Link>
-        </div>
-      </form>
+            {/* Actions */}
+            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4 border-t border-[rgb(var(--border-light))]">
+              <Link href="/dashboard/invoices" className="flex-1 sm:flex-none">
+                <Button type="button" variant="secondary" className="w-full">
+                  Cancel
+                </Button>
+              </Link>
+              <Button
+                type="submit"
+                variant="primary"
+                loading={loading}
+                disabled={loading || !clientId || !amount || loadingData}
+                className="flex-1"
+              >
+                Create Invoice
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }
